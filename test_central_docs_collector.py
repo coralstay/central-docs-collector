@@ -28,13 +28,13 @@ spec = importlib.util.spec_from_file_location("central_docs_collector", MODULE_P
 assert spec is not None and spec.loader is not None
 collector = importlib.util.module_from_spec(spec)
 sys.modules["central_docs_collector"] = collector
-spec.loader.exec_module(collector)
+spec.loader.exec_module(collector)  # ---- 1
 
 
 class TestSecurityAndExclusionFilters(unittest.TestCase):
     """시크릿/인증정보 차단 및 제외 디렉터리 필터 테스트"""
 
-    def test_blocks_secret_and_sensitive_files(self) -> None:
+    def test_blocks_secret_and_sensitive_files(self) -> None:  # ---- 2
         blocked_samples = [
             Path("/repo/.env"),
             Path("/repo/.env.local"),
@@ -390,7 +390,7 @@ class TestPromptExtractionAndEndToEndCollection(unittest.TestCase):
         )
 
         with mock.patch.object(collector, "CLAUDE_HOME", self.mock_claude), \
-             mock.patch.object(collector, "GEMINI_HOME", self.mock_gemini):
+             mock.patch.object(collector, "GEMINI_HOME", self.mock_gemini):  # ---- 3
             items, prompt_count, index_path, manifest_path = collector.collect_all(
                 workspace_root=self.ws,
                 target_dir=self.target,
@@ -438,7 +438,7 @@ class TestMarkdownAndTargetSafety(unittest.TestCase):
         self.assertEqual(wrapped[0], "````text")
         self.assertEqual(wrapped[2], "````")
 
-    def test_rejects_dangerous_target_directories(self) -> None:
+    def test_rejects_dangerous_target_directories(self) -> None:  # ---- 4
         ws = Path("/tmp/sample-ws/githubs")
         with self.assertRaises(ValueError):
             collector._validate_target_dir(ws, ws)
@@ -830,3 +830,23 @@ class TestFullCoverageEdgeCasesAndCLI(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+# ======== 노트 ========
+# 1 하이픈 이름 모듈의 동적 로드
+#   설명: 대상 파일명이 central-docs-collector.py라 일반 import가 안 된다. importlib으로 경로에서 직접 로드해
+#   설명: collector라는 이름으로 쓴다. 테스트가 수집기 안의 상수와 함수를 직접 참조하는 진입점이다.
+#   관련: central-docs-collector.py
+# 2 시크릿 차단 회귀 테스트
+#   설명: .env, 토큰, 인증서, DB 캐시 등 수집하면 안 되는 파일 목록이 계속 차단되는지 확인한다.
+#   설명: 수집기의 시크릿 차단 불변식을 지키는 핵심 테스트이므로 목록을 줄이지 않는다.
+#   관련: central-docs-collector.py의 is_secret_or_blocked()
+#   개념: 불변식, 회귀 테스트
+# 3 홈 디렉터리 모의 치환
+#   설명: CLAUDE_HOME과 GEMINI_HOME을 임시 폴더로 바꿔 끼워, 실제 ~/.claude와 ~/.gemini를 읽거나 건드리지 않고
+#   설명: 전체 수집 파이프라인(collect_all)을 끝까지 검증한다.
+#   개념: 모킹(mock.patch.object), 격리
+# 4 위험한 타겟 폴더 거부
+#   설명: 타겟이 워크스페이스 자체·상위(홈 포함)·하위일 때 ValueError가 나는지 확인한다.
+#   설명: 이 가드가 없으면 수집 전 정리 단계가 원본을 지울 수 있다.
+#   관련: central-docs-collector.py의 _validate_target_dir()
