@@ -1,8 +1,16 @@
 #!/usr/bin/env python3
-# ==============================================================================
-# File Name   : central-docs-collector.py
-# Author      : coralstay
-# Updated At  : 2026-10-29
+# ---
+# title: central-docs-collector.py
+# description: 워크스페이스·글로벌 AI 설정의 설계·운영·보안 문서와 프롬프트 기록을 중앙 폴더에 평탄하게 수집하고 인덱스를 만든다
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
+# [설계 메모]
+# 기존 배너 정보: File Name = central-docs-collector.py, Author = coralstay, Updated At = 2026-10-29.
+# (title·authors로 옮겼고 updated_date는 새 이력 기준 날짜로 둔다.) 아래는 기존 Description과 가이드 원문이다.
 # Description :
 #   소프트웨어 구현·설계·운영·보안 관점의 모든 결정사항(MD 및 비-MD 설정 파일)과
 #   AI 에이전트(Claude, Antigravity, Gemini)의 지침·스킬·커맨드·훅·프롬프트 기록을

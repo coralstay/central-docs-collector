@@ -1,8 +1,15 @@
-# ===============================================================
-# File Name: test_central_docs_collector.py
-# Description:
-#   central-docs-collector.py 에 대한 단위 및 통합 테스트 스위트
-# ===============================================================
+# ---
+# title: test_central_docs_collector.py
+# description: central-docs-collector.py의 시크릿 차단·분류·평탄화·프롬프트 추출 등을 검증하는 단위·통합 테스트 스위트
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
+# [설계 메모]
+# 기존 배너 정보: File Name = test_central_docs_collector.py.
+# Description: central-docs-collector.py 에 대한 단위 및 통합 테스트 스위트
 from __future__ import annotations
 
 import ast
