@@ -1,8 +1,16 @@
 #!/usr/bin/env python3
-# ==============================================================================
-# File Name   : central-docs-collector.py
-# Author      : coralstay
-# Updated At  : 2026-10-29
+# ---
+# title: central-docs-collector.py
+# description: 워크스페이스·글로벌 AI 설정의 설계·운영·보안 문서와 프롬프트 기록을 중앙 폴더에 평탄하게 수집하고 인덱스를 만든다
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
+# [설계 메모]
+# 기존 배너 정보: File Name = central-docs-collector.py, Author = coralstay, Updated At = 2026-10-29.
+# (title·authors로 옮겼고 updated_date는 새 이력 기준 날짜로 둔다.) 아래는 기존 Description과 가이드 원문이다.
 # Description :
 #   소프트웨어 구현·설계·운영·보안 관점의 모든 결정사항(MD 및 비-MD 설정 파일)과
 #   AI 에이전트(Claude, Antigravity, Gemini)의 지침·스킬·커맨드·훅·프롬프트 기록을
@@ -358,7 +366,7 @@ EXTERNAL_NOISE_DIRS: set[str] = {
 }
 
 # 1-5. 보안 차단 규칙 (절대 수집하지 않는 실제 환경변수·토큰·인증서·DB 캐시)
-SECRET_FILE_NAMES: set[str] = {
+SECRET_FILE_NAMES: set[str] = {  # ---- 1
     ".env", ".env.local", ".env.development", ".env.production",
     "credentials.json", "token.json", ".claude.json",
     "antigravity-oauth-token", "jetski-standalone-oauth-token",
@@ -601,7 +609,7 @@ def build_flat_filename(
 
     ext = Path(candidate).suffix
     stem = candidate[: len(candidate) - len(ext)] if ext else candidate
-    short_hash = hashlib.sha1(f"{origin_scope}:{_nfc(display_rel_path)}".encode("utf-8")).hexdigest()[:8]
+    short_hash = hashlib.sha1(f"{origin_scope}:{_nfc(display_rel_path)}".encode("utf-8")).hexdigest()[:8]  # ---- 2
     suffix = f"~{short_hash}{ext}"
     target_stem_bytes = max_bytes - len(suffix.encode("utf-8"))
 
@@ -642,8 +650,7 @@ def classify_workspace_file(
     lower_name = name.lower()
     ext = path.suffix.lower()
 
-    # 외부 레퍼런스/서적 예제 폴더, Git worktree 복제본, OCR 페이지 출력 덤프 및 외부 크롤링 데이터 제외
-    if any(p in EXTERNAL_NOISE_DIRS for p in parts):
+    if any(p in EXTERNAL_NOISE_DIRS for p in parts):  # ---- 3
         return None
     if "worktrees" in parts or any(p.endswith("-wt") for p in parts):
         return None
@@ -794,14 +801,14 @@ def scan_workspace(workspace_root: Path, include_tasks: bool = True) -> list[tup
 
     roots_to_scan: list[tuple[Path, str | None]] = [(workspace_root, None)]
     if workspace_root.resolve() == DEFAULT_WORKSPACE_DIR.resolve():
-        sibling_ws = workspace_root.parent / "github-gardenning"
+        sibling_ws = workspace_root.parent / "github-gardenning"  # ---- 4
         if sibling_ws.is_dir():
             roots_to_scan.append((sibling_ws, "github-gardenning"))
 
     for scan_root, prefix_override in roots_to_scan:
         for root_dir, dirnames, filenames in os.walk(scan_root):
             root_path = Path(root_dir)
-            dirnames[:] = [
+            dirnames[:] = [  # ---- 5
                 d for d in dirnames
                 if d not in EXCLUDED_DIR_NAMES
                 and d not in EXTERNAL_NOISE_DIRS
@@ -1139,17 +1146,15 @@ def extract_all_prompt_records() -> list[PromptRecord]:
         sid = session_id or "-"
         norm_text = " ".join(cleaned.split())
 
-        # history.jsonl의 '[Pasted text #1 +N lines]' 축약본이 트랜스크립트 원문과 같은 시점에 존재하면 제외
-        if channel == "history.jsonl" and "[Pasted text #" in cleaned and sid != "-":
+        if channel == "history.jsonl" and "[Pasted text #" in cleaned and sid != "-":  # ---- 6
             existing_ts_list = session_timestamps.get((tool, sid), [])
             if any(abs(sort_ts - ets) <= 120 for ets in existing_ts_list):
                 return
 
-        # 동일 채널(1초 이내) 및 이종 채널 간(300초 이내) 중복 제거
         text_key = (tool, norm_text)
         prev_list = seen_entries.setdefault(text_key, [])
         for prev_ts, prev_channel in prev_list:
-            if prev_channel == channel and abs(sort_ts - prev_ts) <= 1.0:
+            if prev_channel == channel and abs(sort_ts - prev_ts) <= 1.0:  # ---- 7
                 return
             if prev_channel != channel and abs(sort_ts - prev_ts) <= 300.0:
                 return
@@ -1173,7 +1178,7 @@ def extract_all_prompt_records() -> list[PromptRecord]:
 
     # 1) Claude 프로젝트별 세션 트랜스크립트 (~/.claude/projects/**/*.jsonl 및 transcript_backups) — 전문 우선 확보 (서브에이전트 제외)
     claude_transcript_files: list[Path] = []
-    claude_projects_dir = CLAUDE_HOME / "projects"
+    claude_projects_dir = CLAUDE_HOME / "projects"  # ---- 8
     if claude_projects_dir.is_dir():
         claude_transcript_files.extend(sorted(claude_projects_dir.rglob("*.jsonl")))
     transcript_backups_dir = CLAUDE_HOME / "hooks-logs" / "transcript_backups"
@@ -1280,7 +1285,7 @@ def extract_all_prompt_records() -> list[PromptRecord]:
                     if not conv_dir.is_dir():
                         continue
                     logs_dir = conv_dir / ".system_generated" / "logs"
-                    trans_file = logs_dir / "transcript_full.jsonl"
+                    trans_file = logs_dir / "transcript_full.jsonl"  # ---- 9
                     if not trans_file.is_file():
                         trans_file = logs_dir / "transcript.jsonl"
                     if not trans_file.is_file():
@@ -1695,7 +1700,7 @@ def _validate_target_dir(workspace_root: Path, target_dir: Path) -> None:
     tg_res = target_dir.resolve()
     home_res = Path.home().resolve()
 
-    if tg_res in {ws_res, home_res, Path("/")}:
+    if tg_res in {ws_res, home_res, Path("/")}:  # ---- 10
         raise ValueError(f"안전 가드레일: 타겟 폴더('{tg_res}')는 워크스페이스나 홈/루트 디렉터리 자체일 수 없습니다.")
     if ws_res.is_relative_to(tg_res):
         raise ValueError(f"안전 가드레일: 타겟 폴더('{tg_res}')가 워크스페이스('{ws_res}')의 상위 폴더일 수 없습니다.")
@@ -1732,14 +1737,13 @@ def _clean_previous_managed_files(target_dir: Path, manifest_path: Path, clean_a
         except Exception:
             pass
 
-    # MANIFEST.json이 없거나 손상된 경우 `{category}__*` 접두사를 가진 기존 수집본 정리
-    prefixes = tuple(f"{cat}__" for cat in CATEGORY_META)
+    prefixes = tuple(f"{cat}__" for cat in CATEGORY_META)  # ---- 11
     for existing in target_dir.iterdir():
         if existing.is_file() and existing.name.startswith(prefixes):
             existing.unlink()
 
 
-def collect_all(
+def collect_all(  # ---- 12
     workspace_root: Path,
     target_dir: Path,
     include_global: bool = True,
@@ -1933,7 +1937,7 @@ def run_self_tests(verbose: bool = False) -> None:
         res = subprocess.run(cmd, cwd=test_file.parent)
         raise SystemExit(res.returncode)
 
-    res = subprocess.run(cmd, cwd=test_file.parent, capture_output=True, text=True)
+    res = subprocess.run(cmd, cwd=test_file.parent, capture_output=True, text=True)  # ---- 13
     if res.returncode != 0:
         print("❌ 사전 검증 테스트(test_central_docs_collector.py) 실패! 수집을 중단합니다:\n")
         print(res.stderr or res.stdout)
@@ -2011,7 +2015,7 @@ def main() -> None:
     반환값:
         None
     """
-    args = build_arg_parser().parse_args()
+    args = build_arg_parser().parse_args()  # ---- 14
 
     if args.test:
         run_self_tests(verbose=True)
@@ -2065,3 +2069,61 @@ def main() -> None:
 
 if __name__ == "__main__":  # pragma: no cover
     main()
+
+
+# ======== 노트 ========
+# 1 시크릿 파일명 차단 목록
+#   설명: 환경변수·토큰·OAuth 토큰 파일명은 어떤 경로에서도 수집하지 않는다. 이 집합과 SECRET_SUFFIXES,
+#   설명: is_secret_or_blocked()가 함께 시크릿 유출을 막는 불변식이며, 스캐너는 분류 전에 항상 이 검사를 거친다.
+#   관련: test_central_docs_collector.py (test_blocks_secret_and_sensitive_files)
+#   개념: 불변식, 차단 목록(denylist)
+# 2 240바이트 초과 시 해시 접미사
+#   설명: macOS APFS 파일명 255B 제한 때문에 UTF-8 기준 240B를 넘으면 `~{sha1 앞 8자리}{확장자}`를 붙여 잘라 낸다.
+#   설명: 해시 입력에 origin_scope를 넣어 서로 다른 출처의 같은 상대 경로가 같은 이름으로 합쳐지지 않게 한다.
+#   개념: 결정적 이름(deterministic naming), UTF-8 바이트 절단
+# 3 외부·노이즈 폴더 제외
+#   설명: 외부 레퍼런스/서적 예제 폴더, Git worktree 복제본, OCR 페이지 출력 덤프 및 외부 크롤링 데이터는
+#   설명: 엔지니어링 의사결정과 무관하므로 분류 단계에서 제외한다(원문 주석: "외부 레퍼런스/서적 예제 폴더, Git worktree
+#   설명: 복제본, OCR 페이지 출력 덤프 및 외부 크롤링 데이터 제외").
+#   관련: EXTERNAL_NOISE_DIRS, scan_workspace()의 가지치기(노트 5)
+# 4 형제 워크스페이스 자동 포함
+#   설명: 기본 워크스페이스(~/githubs)를 스캔할 때만 형제 폴더 github-gardenning도 함께 스캔하고, 그 결과의 프로젝트명은
+#   설명: 접두사 github-gardenning으로 고정한다. 임의 -w 경로를 줬을 때는 포함하지 않는다.
+#   관련: DEFAULT_WORKSPACE_DIR
+# 5 os.walk 제자리 가지치기
+#   설명: dirnames를 슬라이스 대입으로 제자리 수정해야 os.walk가 제외 폴더로 내려가지 않는다.
+#   설명: 새 리스트를 대입하면 가지치기가 적용되지 않는다. 대규모 워크스페이스 순회 성능의 핵심이다.
+#   개념: 가지치기(pruning), 제자리 변경
+# 6 붙여넣기 축약본 제외
+#   설명: history.jsonl의 `[Pasted text #1 +N lines]` 축약본이 트랜스크립트 원문과 같은 시점(120초 이내)에 이미 존재하면
+#   설명: 제외한다. 전문이 보존된 쪽만 남기려는 것이다.
+#   관련: extract_all_prompt_records() docstring의 동작 흐름 1)
+# 7 중복 제거 시간창
+#   설명: 동일 채널은 1초 이내, 서로 다른 채널은 300초 이내의 동일 프롬프트만 중복으로 본다. 이렇게 해야 같은 지시를
+#   설명: 사용자가 일부러 반복한 턴은 남기면서 트랜스크립트·history·hook 로그가 겹쳐 기록한 사본만 걸러 낸다.
+#   개념: 중복 제거(dedup), 시간창(time window)
+# 8 Claude 트랜스크립트 소스
+#   설명: ~/.claude/projects/**/*.jsonl과 hooks-logs/transcript_backups가 원문이 보존된 1순위 소스다.
+#   설명: 서브에이전트 로그(subagents, agent-*)는 사람이 입력한 프롬프트가 아니므로 읽지 않는다.
+#   관련: CLAUDE_HOME, INTERNAL_MESSAGE_PREFIXES
+# 9 Antigravity 트랜스크립트 소스
+#   설명: brain/<대화ID>/.system_generated/logs 아래 transcript_full.jsonl을 우선, 없으면 transcript.jsonl을 읽는다.
+#   설명: history.jsonl의 conversationId -> workspace 매핑으로 프로젝트를 정하고, 없으면 본문의 Active Workspaces 등에서 찾는다.
+#   관련: GEMINI_HOME
+# 10 타겟 폴더 안전 가드레일
+#   설명: 타겟 폴더가 워크스페이스·홈·루트 자체이거나 워크스페이스의 상위 또는 하위면 ValueError로 막는다.
+#   설명: 수집 전 단계에서 기존 파일을 지우므로(_clean_previous_managed_files), 잘못된 경로면 원본 삭제나 재귀 수집이 일어날 수 있다.
+#   개념: 가드레일(guardrail), 불변식
+# 11 MANIFEST 유실 시 고아 파일 정리
+#   설명: MANIFEST.json이 없거나 손상된 경우 `{category}__*` 접두사를 가진 기존 수집본을 지워 재수집 때 쌓이지 않게 한다.
+#   설명: clean_all이 아니면 접두사가 맞는 관리 대상 파일만 지우고 그 밖의 파일은 건드리지 않는다.
+# 12 수집 파이프라인 진입 함수
+#   설명: 타겟 검증 -> 이전 수집본 정리 -> 스캔 -> 평탄화 복사 -> 프롬프트 추출 -> INDEX.md·MANIFEST.json 순서로 진행한다.
+#   관련: 파일 위 [설계 메모]의 실행 흐름도 Step 0~5
+# 13 수집 전 사전 테스트 게이트
+#   설명: 기본 실행은 수집 전에 test_central_docs_collector.py를 조용히 돌리고, 실패하면 수집을 중단하고 같은 종료 코드로 끝낸다.
+#   설명: 분류기나 보안 필터가 깨진 채로 중앙 폴더를 덮어쓰지 않게 하는 안전장치다(--skip-test로 생략 가능).
+#   관련: test_central_docs_collector.py
+# 14 프로그램 진입점
+#   설명: CLI 인자를 해석해 --test(테스트만), -f/--find(키워드 검색), 기본(전체 수집) 중 하나를 수행한다.
+#   관련: build_arg_parser(), collect_all()
